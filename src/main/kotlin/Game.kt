@@ -6,6 +6,7 @@ import net.mamoe.mirai.contact.Group
 import net.mamoe.mirai.contact.Member
 import net.mamoe.mirai.message.data.*
 import okhttp3.internal.wait
+import java.lang.Math.max
 import java.lang.StringBuilder
 import java.util.TimerTask
 import java.util.Timer
@@ -34,6 +35,8 @@ data class IdleCheckingTask (
 data class Game(
     val group: Group
 ) {
+    var stacking = 0 // 当前累积加牌数量，Config.stack为false时一定为0
+    var plusFour = false // 累积加牌中是否有+4
     var timer = Timer()
     var waiting = true
     val players = mutableListOf<Player>()
@@ -112,17 +115,15 @@ data class Game(
         }
     }
     suspend fun play_wild(sender: Member, card: String, color: String?, uno: Boolean) {
-        if (players[current].member.id == sender.id || (Config.cut && card == lastCard)) {
+        if (players[current].member.id == sender.id || (Config.cut && plusFour && card == "+4")) {
             if (card !in players[current].cards) {
                 group.sendMessage("你没有对应的牌！")
                 return
             }
-            /*
-            if (card == "变色" && lastCard.contains("+")) {
+            if (card == "变色" && stacking != 0) {
                 group.sendMessage("出的牌不符合牌型")
                 return
             }
-             */
             val builder = MessageChainBuilder()
             val old = current
             players[old].cards -= card
@@ -130,10 +131,16 @@ data class Game(
             builder += "打出$card，剩余${players[old].cards.size}张牌。\n"
             next()
             if (card == "+4") {
-                draw_cards(players[current], 4)
-                builder += At(players[current].member.id)
-                builder += "抽四张牌\n"
-                next()
+                if (Config.stack) {
+                    stacking += 4
+                    plusFour = true
+                    builder += "当前累积${stacking}张牌"
+                } else {
+                    draw_cards(players[current], 4)
+                    builder += At(players[current].member.id)
+                    builder += "抽四张牌\n"
+                    next()
+                }
             }
             if (color != null) {
                 builder += "颜色变为$color\n"
@@ -159,6 +166,16 @@ data class Game(
                 group.sendMessage("出的牌不符合牌型，上一次出的牌是$lastCard")
                 return
             }
+            if (stacking != 0) {
+                if (card[1] != '+') {
+                    group.sendMessage("出的牌不符合牌型，当前正在被累加")
+                    return
+                }
+                if (plusFour) {
+                    group.sendMessage("出的牌不符合牌型，只能打+4")
+                    return
+                }
+            }
             val builder = MessageChainBuilder()
             val old = current
             players[old].cards -= card
@@ -179,10 +196,15 @@ data class Game(
                     next()
                 }
                 "+2" -> {
-                    builder += At(players[current].member.id)
-                    draw_cards(players[current], 2)
-                    builder += "抽两张牌\n"
-                    next()
+                    if (Config.stack) {
+                        stacking += 2
+                        builder += "当前累积${stacking}张牌"
+                    } else {
+                        builder += At(players[current].member.id)
+                        draw_cards(players[current], 2)
+                        builder += "抽两张牌\n"
+                        next()
+                    }
                 }
             }
             playerInfo(builder, players[old], uno)
@@ -206,9 +228,10 @@ data class Game(
     }
     suspend fun draw(sender: Member, builder: MessageChainBuilder = MessageChainBuilder()) {
         if (players[current].member.id == sender.id) {
-            draw_cards(players[current])
+            draw_cards(players[current], max(stacking, 1))
             builder += At(players[current].member.id)
-            builder += "抽牌，剩余${players[current].cards.size}张牌\n"
+            builder += "抽${max(stacking, 1)}张牌，剩余${players[current].cards.size}张牌\n"
+            stacking = 0
             next()
             playerInfo(builder, players[current], false)
             group.sendMessage(builder.build())

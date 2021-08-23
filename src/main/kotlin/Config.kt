@@ -18,6 +18,8 @@ object Config : AutoSavePluginConfig("GlobalConfig") {
     var timer by value(false)
     @ValueDescription("抢牌，某人出完一张牌时，如果有完全相同（颜色、点数都相同）的牌，可以无视顺序直接出牌。")
     var cut by value(false)
+    @ValueDescription("加牌累积，被+2（或+4）时可以打出任意加牌（或+4），将惩罚累积给下家。")
+    var stack by value(false)
 }
 
 object ConfigCommand : CompositeCommand(
