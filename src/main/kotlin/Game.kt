@@ -21,6 +21,9 @@ data class Game(
         MutableList(4) { "变色" } +
         MutableList(4) { "+4" }).toMutableList()
 
+    suspend fun getPlayer(sender: Member): Player {
+        return players.first { it.member.id == sender.id }
+    }
     suspend fun join(sender: Member) {
         players += Player(sender)
         group.sendMessage(messageChainOf(
@@ -45,7 +48,18 @@ data class Game(
         }
         cardIndex = players.size * 7
         waiting = false
-        group.sendMessage("游戏开始")
+        group.sendMessage(messageChainOf(
+            PlainText("游戏开始\n"),
+            At(players[current].member.id),
+            PlainText("先出牌"),
+        ))
+    }
+    suspend fun prevPlayer(): Player {
+        if (clockwise) {
+            return players[(current + players.size - 1) % players.size]
+        } else {
+            return players[(current + 1) % players.size]
+        }
     }
     suspend fun next() {
         if (clockwise) {
@@ -54,7 +68,7 @@ data class Game(
             current = (current + players.size - 1) % players.size
         }
     }
-    suspend fun playerInfo(builder: MessageChainBuilder, player: Player) {
+    suspend fun playerInfo(builder: MessageChainBuilder, player: Player, uno: Boolean) {
         when (player.cards.size) {
             0 -> {
                 builder += listOf<MessageContent>(
@@ -69,8 +83,11 @@ data class Game(
                 PlainText("出牌"),
             )
         }
+        if (player.cards.size == 1) {
+            player.uno = uno
+        }
     }
-    suspend fun play_wild(sender: Member, card: String, color: String?) {
+    suspend fun play_wild(sender: Member, card: String, color: String?, uno: Boolean) {
         if (players[current].member.id == sender.id) {
             if (card !in players[current].cards) {
                 group.sendMessage("你没有对应的牌！")
@@ -99,12 +116,12 @@ data class Game(
                 builder += "未声明颜色！按红色处理\n"
                 lastCard = "红色"
             }
-            playerInfo(builder, players[old])
+            playerInfo(builder, players[old], uno)
             players[old].sendCards()
             group.sendMessage(builder.build())
         }
     }
-    suspend fun play_normal(sender: Member, card: String) {
+    suspend fun play_normal(sender: Member, card: String, uno: Boolean) {
         if (players[current].member.id == sender.id) {
             if (card !in players[current].cards) {
                 group.sendMessage("你没有对应的牌！")
@@ -142,7 +159,7 @@ data class Game(
                     next()
                 }
             }
-            playerInfo(builder, players[old])
+            playerInfo(builder, players[old], uno)
             players[old].sendCards()
             group.sendMessage(builder.build())
         }
@@ -165,8 +182,48 @@ data class Game(
             builder += At(players[current].member.id)
             builder += "抽牌。\n"
             next()
-            playerInfo(builder, players[current])
+            playerInfo(builder, players[current], false)
             group.sendMessage(builder.build())
+        }
+    }
+    suspend fun checkUNO(sender: Member) {
+        val player = prevPlayer()
+        if (player.member == sender) {
+            // 自己喊UNO
+            if (player.cards.size != 1) {
+                group.sendMessage(messageChainOf(
+                    At(sender),
+                    PlainText("你的手牌数超过一张，不能UNO！\n罚抽2张牌")
+                ))
+                draw_cards(player, 2)
+                return
+            }
+            if (player.uno == false) {
+                player.uno = true
+                group.sendMessage(messageChainOf(
+                    At(sender),
+                    PlainText("成功UNO！红色警报！")
+                ))
+            }
+        } else {
+            // 抓人
+            if (player.cards.size != 1) {
+                group.sendMessage(messageChainOf(
+                    At(sender),
+                    PlainText("被抓的人手牌数超过一张，不能UNO！\n罚抽2张牌")
+                ))
+                draw_cards(getPlayer(sender), 2)
+                return
+            }
+            if (player.uno == false) {
+                group.sendMessage(messageChainOf(
+                    At(sender),
+                    PlainText("抓人成功！\n"),
+                    At(player.member.id),
+                    PlainText("罚抽2张牌。")
+                ))
+                draw_cards(player, 2)
+            }
         }
     }
 }

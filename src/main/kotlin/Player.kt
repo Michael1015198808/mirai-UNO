@@ -4,6 +4,7 @@ import net.mamoe.mirai.contact.Member
 
 data class Player(val member: Member) {
     var cards = mutableListOf<String>()
+    var uno = false
     suspend fun sendCards () {
         cards.sortBy {
             val color = COLORS.indexOf(it[0])
