@@ -1,13 +1,11 @@
 package michael.uno
 
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import net.mamoe.mirai.contact.Group
 import net.mamoe.mirai.contact.Member
 import net.mamoe.mirai.event.events.NudgeEvent
 import net.mamoe.mirai.event.nextEventOrNull
 import net.mamoe.mirai.message.data.*
-import okhttp3.internal.wait
 import java.lang.Math.max
 import java.lang.StringBuilder
 import java.util.TimerTask
@@ -21,14 +19,12 @@ data class IdleCheckingTask (
 ): TimerTask() {
     override fun run() {
         runBlocking {
-            while (true) {
-                delay(30_000L)
-                val currentPlayer = game.players[game.current].member
-                val builder = MessageChainBuilder()
-                builder += At(currentPlayer)
-                builder += PlainText("超时，罚抽${max(game.stacking, 1)}张牌。\n")
-                game.draw(currentPlayer, builder)
-            }
+            val currentPlayer = game.players[game.current].member
+            val builder = MessageChainBuilder()
+            builder += At(currentPlayer)
+            builder += PlainText("超时，罚抽${max(game.stacking, 1)}张牌。\n")
+            game.draw(currentPlayer, builder)
+            game.timer.schedule(IdleCheckingTask(game), 30_000L)
         }
     }
 }
@@ -41,6 +37,7 @@ data class Game(
     var timer = Timer()
     var waiting = true
     val players = mutableListOf<Player>()
+    var prev = 0
     var current = 0
     var lastCard = ""
     var cardIndex = 0
@@ -119,55 +116,7 @@ data class Game(
             player.uno = uno
         }
     }
-    suspend fun play_wild(sender: Member, card: String, color: String?, uno: Boolean) {
-        if (Config.cut && plusFour && card == "+4") {
-            val index = players.indexOfFirst { it.member.id == sender.id }
-            if (card !in players[index].cards) {
-                group.sendMessage("你没有对应的牌！")
-                return
-            }
-            current = index
-        }
-        if (players[current].member.id == sender.id) {
-            if (card !in players[current].cards) {
-                group.sendMessage("你没有对应的牌！")
-                return
-            }
-            if (card == "变色" && stacking != 0) {
-                group.sendMessage("出的牌不符合牌型")
-                return
-            }
-            val builder = MessageChainBuilder()
-            val old = current
-            players[old].cards -= card
-            builder += At(sender)
-            builder += "打出$card，剩余${players[old].cards.size}张牌。\n"
-            next()
-            if (card == "+4") {
-                if (Config.stack) {
-                    stacking += 4
-                    plusFour = true
-                    builder += "当前累积${stacking}张牌"
-                } else {
-                    draw_cards(players[current], 4)
-                    builder += At(players[current].member.id)
-                    builder += "抽四张牌\n"
-                    next()
-                }
-            }
-            if (color != null) {
-                builder += "颜色变为$color\n"
-                lastCard = "${color}色"
-            } else {
-                builder += "未声明颜色！按红色处理\n"
-                lastCard = "红色"
-            }
-            playerInfo(builder, players[old], uno)
-            players[old].sendCards()
-            group.sendMessage(builder.build())
-        }
-    }
-    suspend fun play_normal(sender: Member, card: String, uno: Boolean) {
+    suspend fun play(sender: Member, card: String, color: String, uno: Boolean) {
         if (Config.cut && card == lastCard) {
             val index = players.indexOfFirst { it.member.id == sender.id }
             if (card !in players[index].cards) {
@@ -188,21 +137,21 @@ data class Game(
                 return
             }
             if (stacking != 0) {
-                if (card[1] != '+') {
+                if (!card.contains('+')) {
                     group.sendMessage("出的牌不符合牌型，当前正在被累加")
                     return
                 }
-                if (plusFour) {
-                    group.sendMessage("出的牌不符合牌型，只能打+4")
+                if (plusFour && card != "+4") {
+                    group.sendMessage("出的牌不符合牌型，当前只能打+4")
                     return
                 }
             }
             val builder = MessageChainBuilder()
-            val old = current
-            players[old].cards -= card
+            prev = current
+            players[prev].cards -= card
             lastCard = card
             builder += At(sender)
-            builder += "打出$card，剩余${players[old].cards.size}张牌。\n"
+            builder += "打出$card，剩余${players[prev].cards.size}张牌。\n"
             next()
             when (card.substring(1)) {
                 "禁" -> {
@@ -228,31 +177,27 @@ data class Game(
                     }
                 }
             }
-            playerInfo(builder, players[old], uno)
-            players[old].sendCards()
+            if (card == "+4") {
+                if (Config.stack) {
+                    stacking += 4
+                    plusFour = true
+                    builder += "当前累积${stacking}张牌"
+                } else {
+                    draw_cards(players[current], 4)
+                    builder += At(players[current].member.id)
+                    builder += "抽四张牌\n"
+                    next()
+                }
+            }
+            if (color != "") {
+                builder += "颜色变为$color\n"
+                lastCard = "${color}色"
+            }
+            playerInfo(builder, players[prev], uno)
+            players[prev].sendCards()
             group.sendMessage(builder.build())
             if (Config.touch && card[1] == '0') {
-                group.sendMessage("请在5s内戳一戳机器人！")
-                var unnudgePlayers = players.map { it.member.id }.toMutableSet()
-                var lastNudger: Long? = null
-                nextEventOrNull<NudgeEvent>(5_000L) { event ->
-                    if (unnudgePlayers.remove(sender.id)) {
-                        lastNudger = sender.id
-                    }
-                    false // Keep listening
-                }
-                if (unnudgePlayers.size > 0) {
-                    group.sendMessage(messageChainOf(
-                        unnudgePlayers.map { At(it) }.toMessageChain(),
-                        PlainText("未在2s内拍，罚抽2张牌")
-                    ))
-                } else {
-                    group.sendMessage(messageChainOf(
-                        At(lastNudger!!),
-                        PlainText("最晚拍，罚抽2张牌")
-                    ))
-                    draw_cards(players.first { it.member.id == lastNudger }, 2)
-                }
+                touchEvent()
             }
         }
     }
@@ -271,20 +216,18 @@ data class Game(
         player.sendCards(builder.toString() + "\n")
     }
     suspend fun draw(sender: Member, builder: MessageChainBuilder = MessageChainBuilder()) {
-        if (players[current].member.id == sender.id) {
-            draw_cards(players[current], max(stacking, 1))
-            builder += At(players[current].member.id)
-            builder += "抽${max(stacking, 1)}张牌，剩余${players[current].cards.size}张牌\n"
-            stacking = 0
-            plusFour = false
-            next()
-            playerInfo(builder, players[current], false)
-            group.sendMessage(builder.build())
-        }
+        draw_cards(players[current], max(stacking, 1))
+        builder += At(players[current].member.id)
+        builder += "抽${max(stacking, 1)}张牌，剩余${players[current].cards.size}张牌\n"
+        stacking = 0
+        plusFour = false
+        next()
+        playerInfo(builder, players[current], false)
+        group.sendMessage(builder.build())
     }
     suspend fun checkUNO(sender: Member) {
-        val player = prevPlayer()
-        if (player.member == sender) {
+        val player = players[prev]
+        if (player.member.id == sender.id) {
             // 自己喊UNO
             if (player.cards.size != 1) {
                 group.sendMessage(messageChainOf(
@@ -320,6 +263,32 @@ data class Game(
                 ))
                 draw_cards(player, 2)
             }
+        }
+    }
+    suspend fun touchEvent() {
+        group.sendMessage("请在5s内戳一戳机器人！")
+        var unnudgePlayers = players.map { it.member.id }.toMutableSet()
+        var lastNudger: Long? = null
+        nextEventOrNull<NudgeEvent>(5_000L) { event ->
+            if (unnudgePlayers.remove(event.from.id)) {
+                lastNudger = event.from.id
+            }
+            false // Keep listening
+        }
+        if (unnudgePlayers.size > 0) {
+            group.sendMessage(messageChainOf(
+                unnudgePlayers.map { playerId ->
+                    draw_cards(players.first { it.member.id == playerId }, 2)
+                    At(playerId)
+                }.toMessageChain(),
+                PlainText("未在5s内拍，罚抽2张牌")
+            ))
+        } else {
+            group.sendMessage(messageChainOf(
+                At(lastNudger!!),
+                PlainText("最晚拍，罚抽2张牌")
+            ))
+            draw_cards(players.first { it.member.id == lastNudger }, 2)
         }
     }
 }

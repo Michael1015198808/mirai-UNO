@@ -32,13 +32,6 @@ object ConfigCommand : CompositeCommand(
     description = "UNO配置命令",
 ) {
     private val members = Config::class.declaredMembers
-    /*
-    @SubCommand("设置", "set")
-    @Description("设置UNO选项")
-    suspend fun CommandSenderOnMessage<GroupMessageEvent>.set(option: String, arg: Int) {
-        fromEvent.group.sendMessage("option: $option, arg: $arg")
-    }
-    */
     @SubCommand("设置", "set")
     @Description("设置UNO参数")
     suspend fun CommandSenderOnMessage<GroupMessageEvent>.set(option: String, on: Boolean) {
@@ -46,6 +39,7 @@ object ConfigCommand : CompositeCommand(
         if (field != null) {
             val mp = field as KMutableProperty1<Config, Boolean>
             mp.set(Config, on)
+            fromEvent.group.sendMessage("已${if (on) "启用" else "禁用"}$option！")
         } else {
             fromEvent.group.sendMessage("不存在属性$option！")
         }

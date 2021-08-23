@@ -14,7 +14,7 @@ object PluginMain: KotlinPlugin(
     JvmPluginDescription(
         id = "mirai.UNO",
         name = "mirai UNO插件",
-        version = "0.2.8"
+        version = "0.2.9"
     ) {
         author("鄢振宇https://github.com/michael1015198808")
         info("mirai的UNO插件")
@@ -47,22 +47,31 @@ object PluginMain: KotlinPlugin(
                         "GO", "启动" -> game.start()
                     }
                 } else {
+                    val l = msg.split(Regex("\\s"))
+                    if (game.players[game.current].member.id != sender.id && !(Config.cut && l[0] == game.lastCard)) {
+                        return@subscribeAlways
+                    }
                     if (Config.timer) {
                         game.timer.purge()
                     }
                     if (normal_cards.matches(msg)) {
-                        val l = msg.split(Regex("\\s"))
-                        game.play_normal(sender, l[0], msg.endsWith("UNO"))
+                        game.play(sender, l[0], "", msg.endsWith("UNO"))
                     } else if (wild_cards.matches(msg)) {
-                        val l = msg.split(Regex("\\s"))
-                        game.play_wild(sender, l[0], l.getOrNull(1), msg.endsWith("UNO"))
+                        val color = l.getOrNull(1)
+                        if (color != null) {
+                            game.play(sender, l[0], color, msg.endsWith("UNO"))
+                        } else {
+                            group.sendMessage("""请指定颜色，如"+4 蓝" """)
+                        }
                     } else if (draw.matches(msg)) {
                         game.draw(sender)
                     } else if (msg == "UNO") {
                         game.checkUNO(sender)
+                    } else {
+                        return@subscribeAlways
                     }
                     if (Config.timer) {
-                        game.timer.schedule(IdleCheckingTask(game), 0)
+                        game.timer.schedule(IdleCheckingTask(game), 30_000L)
                     }
                 }
             }
