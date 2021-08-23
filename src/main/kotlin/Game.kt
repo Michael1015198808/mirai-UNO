@@ -184,7 +184,7 @@ data class Game(
             draw_cards(players[current])
             val builder = MessageChainBuilder()
             builder += At(players[current].member.id)
-            builder += "抽牌。\n"
+            builder += "抽牌，剩余${players[current].cards.size}张牌\n"
             next()
             playerInfo(builder, players[current], false)
             group.sendMessage(builder.build())
