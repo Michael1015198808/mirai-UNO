@@ -12,11 +12,11 @@ data class Player(val member: Member) {
                 color * RANKS.size + RANKS.indexOf(it.substring(1))
             } else {
                 when(it) {
-                    "变色" -> 60
-                    "+4" -> 61
+                    "变色" -> 80
+                    "+4" -> 81
                     else -> {
                         System.err.println("$it can't be matched!")
-                        62
+                        82
                     }
                 }
             }
