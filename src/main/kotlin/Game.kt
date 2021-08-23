@@ -117,10 +117,12 @@ data class Game(
                 group.sendMessage("你没有对应的牌！")
                 return
             }
+            /*
             if (card == "变色" && lastCard.contains("+")) {
                 group.sendMessage("出的牌不符合牌型")
                 return
             }
+             */
             val builder = MessageChainBuilder()
             val old = current
             players[old].cards -= card
