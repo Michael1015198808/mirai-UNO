@@ -112,7 +112,7 @@ data class Game(
         }
     }
     suspend fun play_wild(sender: Member, card: String, color: String?, uno: Boolean) {
-        if (players[current].member.id == sender.id) {
+        if (players[current].member.id == sender.id || (Config.cut && card == lastCard)) {
             if (card !in players[current].cards) {
                 group.sendMessage("你没有对应的牌！")
                 return
@@ -148,7 +148,7 @@ data class Game(
         }
     }
     suspend fun play_normal(sender: Member, card: String, uno: Boolean) {
-        if (players[current].member.id == sender.id) {
+        if (players[current].member.id == sender.id || (Config.cut && card == lastCard)) {
             if (card !in players[current].cards) {
                 group.sendMessage("你没有对应的牌！")
                 return
