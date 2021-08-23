@@ -4,6 +4,7 @@ import net.mamoe.mirai.contact.Group
 import net.mamoe.mirai.contact.Member
 import net.mamoe.mirai.message.data.*
 import okhttp3.internal.wait
+import java.lang.StringBuilder
 
 val COLORS = "红黄蓝绿"
 val RANKS = ("0" + "123456789禁转".repeat(2)).map { it.toString() } + listOf<String>("+2", "+2")
@@ -165,15 +166,18 @@ data class Game(
         }
     }
     suspend fun draw_cards(player: Player, n: Int = 1) {
+        val builder = StringBuilder("抽到了")
         repeat(n) {
-            player.cards += deck[cardIndex++]
+            val card = deck[cardIndex++]
+            player.cards += card
+            builder.append("[$card]")
             if (cardIndex == deck.size) {
                 deck.shuffle()
                 cardIndex = 0
                 group.sendMessage("重新洗牌！")
             }
         }
-        player.sendCards()
+        player.sendCards(builder.toString() + "\n")
     }
     suspend fun draw(sender: Member) {
         if (players[current].member.id == sender.id) {

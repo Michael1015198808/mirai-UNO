@@ -5,7 +5,7 @@ import net.mamoe.mirai.contact.Member
 data class Player(val member: Member) {
     var cards = mutableListOf<String>()
     var uno = false
-    suspend fun sendCards () {
+    suspend fun sendCards (msg: String = "") {
         cards.sortBy {
             val color = COLORS.indexOf(it[0])
             if (color >= 0) {
@@ -21,6 +21,6 @@ data class Player(val member: Member) {
                 }
             }
         }
-        member.sendMessage(cards.joinToString("][", prefix = "[", postfix = "]"))
+        member.sendMessage(msg + cards.joinToString("][", prefix = "[", postfix = "]"))
     }
 }
