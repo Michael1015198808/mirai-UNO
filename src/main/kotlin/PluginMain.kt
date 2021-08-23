@@ -13,13 +13,15 @@ object PluginMain: KotlinPlugin(
     JvmPluginDescription(
         id = "mirai.UNO",
         name = "mirai UNO插件",
-        version = "0.1.7"
+        version = "0.2.0"
     ) {
         author("鄢振宇https://github.com/michael1015198808")
         info("mirai的UNO插件")
     }
 ) {
     override fun onEnable() {
+        ConfigCommand.register()
+        Config.reload()
         logger.info { "Plugin loaded" }
         //配置文件目录 "${dataFolder.absolutePath}/"
         val eventChannel = GlobalEventChannel.parentScope(this)
