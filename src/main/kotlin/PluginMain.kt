@@ -22,7 +22,9 @@ object PluginMain: KotlinPlugin(
         //配置文件目录 "${dataFolder.absolutePath}/"
         val eventChannel = GlobalEventChannel.parentScope(this)
         val games = mutableMapOf<Long, Game>()
-        val cards = Regex("""[红黄蓝绿RYLG][0-9转禁+SRP]|变色|\+4""")
+        val normal_cards = Regex("""[红黄蓝绿RYLG]([0-9转禁SRP]|\+2)""")
+        val wild_cards = Regex("""(变色|\+4)\s+[红黄蓝绿RYLG]?""")
+        val draw  = Regex("""不要|没有|抽牌""")
 
         eventChannel.subscribeAlways<GroupMessageEvent>{
             if(message[1] is PlainText) {
@@ -35,8 +37,13 @@ object PluginMain: KotlinPlugin(
                         "GO", "启动" -> game.start()
                     }
                 } else {
-                    if (cards.matches(msg)) {
-                        game.play(sender, msg)
+                    if (normal_cards.matches(msg)) {
+                        game.play_normal(sender, msg)
+                    } else if (wild_cards.matches(msg)) {
+                        val l = msg.split(Regex("\\s"))
+                        game.play_wild(sender, l[0], l.getOrNull(1))
+                    } else if (draw.matches(msg)) {
+                        game.draw(sender)
                     }
                 }
             }
