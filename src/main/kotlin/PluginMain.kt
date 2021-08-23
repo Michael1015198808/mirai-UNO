@@ -1,5 +1,6 @@
 package michael.uno
 
+import net.mamoe.mirai.console.command.CommandManager.INSTANCE.register
 import net.mamoe.mirai.console.plugin.jvm.JvmPluginDescription
 import net.mamoe.mirai.console.plugin.jvm.KotlinPlugin
 import net.mamoe.mirai.event.GlobalEventChannel
@@ -13,7 +14,7 @@ object PluginMain: KotlinPlugin(
     JvmPluginDescription(
         id = "mirai.UNO",
         name = "mirai UNO插件",
-        version = "0.2.1"
+        version = "0.2.2"
     ) {
         author("鄢振宇https://github.com/michael1015198808")
         info("mirai的UNO插件")
@@ -46,6 +47,9 @@ object PluginMain: KotlinPlugin(
                         "GO", "启动" -> game.start()
                     }
                 } else {
+                    if (Config.timer) {
+                        game.timer.purge()
+                    }
                     if (normal_cards.matches(msg)) {
                         val l = msg.split(Regex("\\s"))
                         game.play_normal(sender, l[0], msg.endsWith("UNO"))
@@ -56,6 +60,9 @@ object PluginMain: KotlinPlugin(
                         game.draw(sender)
                     } else if (msg == "UNO") {
                         game.checkUNO(sender)
+                    }
+                    if (Config.timer) {
+                        game.timer.schedule(IdleCheckingTask(game), 0)
                     }
                 }
             }

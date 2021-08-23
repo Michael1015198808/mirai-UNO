@@ -1,17 +1,40 @@
 package michael.uno
 
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.runBlocking
 import net.mamoe.mirai.contact.Group
 import net.mamoe.mirai.contact.Member
 import net.mamoe.mirai.message.data.*
 import okhttp3.internal.wait
 import java.lang.StringBuilder
+import java.util.TimerTask
+import java.util.Timer
 
 val COLORS = "红黄蓝绿"
 val RANKS = ("0" + "123456789禁转".repeat(2)).map { it.toString() } + listOf<String>("+2", "+2")
 
+data class IdleCheckingTask (
+    val game: Game,
+): TimerTask() {
+    override fun run() {
+        runBlocking {
+            while (true) {
+                delay(5_000L)
+                val currentPlayer = game.players[game.current].member
+                val builder = MessageChainBuilder()
+                builder += At(currentPlayer)
+                builder += PlainText("超时，罚抽一张牌。\n")
+                game.draw(currentPlayer, builder)
+                game.next()
+            }
+        }
+    }
+}
+
 data class Game(
     val group: Group
 ) {
+    var timer = Timer()
     var waiting = true
     val players = mutableListOf<Player>()
     var current = 0
@@ -179,10 +202,9 @@ data class Game(
         }
         player.sendCards(builder.toString() + "\n")
     }
-    suspend fun draw(sender: Member) {
+    suspend fun draw(sender: Member, builder: MessageChainBuilder = MessageChainBuilder()) {
         if (players[current].member.id == sender.id) {
             draw_cards(players[current])
-            val builder = MessageChainBuilder()
             builder += At(players[current].member.id)
             builder += "抽牌，剩余${players[current].cards.size}张牌\n"
             next()
