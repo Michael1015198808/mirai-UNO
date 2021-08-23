@@ -20,6 +20,8 @@ object Config : AutoSavePluginConfig("GlobalConfig") {
     var cut by value(false)
     @ValueDescription("加牌累积，被+2（或+4）时可以打出任意加牌（或+4），将惩罚累积给下家。")
     var stack by value(false)
+    @ValueDescription("出0拍桌，当有人打出0之后，所有人要在2s内拍一拍机器人，没拍的人罚2张牌。若所有人都拍了，则最晚的罚2张牌。")
+    var touch by value(false)
 }
 
 object ConfigCommand : CompositeCommand(

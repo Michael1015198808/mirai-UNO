@@ -4,6 +4,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import net.mamoe.mirai.contact.Group
 import net.mamoe.mirai.contact.Member
+import net.mamoe.mirai.event.events.NudgeEvent
+import net.mamoe.mirai.event.nextEventOrNull
 import net.mamoe.mirai.message.data.*
 import okhttp3.internal.wait
 import java.lang.Math.max
@@ -210,6 +212,29 @@ data class Game(
             playerInfo(builder, players[old], uno)
             players[old].sendCards()
             group.sendMessage(builder.build())
+            if (Config.touch && card[1] == '0') {
+                group.sendMessage("请在5s内戳一戳机器人！")
+                var unnudgePlayers = players.map { it.member.id }.toMutableSet()
+                var lastNudger: Long? = null
+                nextEventOrNull<NudgeEvent>(5_000L) { event ->
+                    if (unnudgePlayers.remove(sender.id)) {
+                        lastNudger = sender.id
+                    }
+                    false // Keep listening
+                }
+                if (unnudgePlayers.size > 0) {
+                    group.sendMessage(messageChainOf(
+                        unnudgePlayers.map { At(it) }.toMessageChain(),
+                        PlainText("未在2s内拍，罚抽2张牌")
+                    ))
+                } else {
+                    group.sendMessage(messageChainOf(
+                        At(lastNudger!!),
+                        PlainText("最晚拍，罚抽2张牌")
+                    ))
+                    draw_cards(players.first { it.member.id == lastNudger }, 2)
+                }
+            }
         }
     }
     suspend fun draw_cards(player: Player, n: Int = 1) {
