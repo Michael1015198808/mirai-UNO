@@ -22,13 +22,12 @@ data class IdleCheckingTask (
     override fun run() {
         runBlocking {
             while (true) {
-                delay(5_000L)
+                delay(30_000L)
                 val currentPlayer = game.players[game.current].member
                 val builder = MessageChainBuilder()
                 builder += At(currentPlayer)
-                builder += PlainText("超时，罚抽一张牌。\n")
+                builder += PlainText("超时，罚抽${max(game.stacking, 1)}张牌。\n")
                 game.draw(currentPlayer, builder)
-                game.next()
             }
         }
     }
@@ -117,7 +116,15 @@ data class Game(
         }
     }
     suspend fun play_wild(sender: Member, card: String, color: String?, uno: Boolean) {
-        if (players[current].member.id == sender.id || (Config.cut && plusFour && card == "+4")) {
+        if (Config.cut && plusFour && card == "+4") {
+            val index = players.indexOfFirst { it.member.id == sender.id }
+            if (card !in players[index].cards) {
+                group.sendMessage("你没有对应的牌！")
+                return
+            }
+            current = index
+        }
+        if (players[current].member.id == sender.id) {
             if (card !in players[current].cards) {
                 group.sendMessage("你没有对应的牌！")
                 return
@@ -157,7 +164,15 @@ data class Game(
         }
     }
     suspend fun play_normal(sender: Member, card: String, uno: Boolean) {
-        if (players[current].member.id == sender.id || (Config.cut && card == lastCard)) {
+        if (Config.cut && card == lastCard) {
+            val index = players.indexOfFirst { it.member.id == sender.id }
+            if (card !in players[index].cards) {
+                group.sendMessage("你没有对应的牌！")
+                return
+            }
+            current = index
+        }
+        if (players[current].member.id == sender.id) {
             if (card !in players[current].cards) {
                 group.sendMessage("你没有对应的牌！")
                 return

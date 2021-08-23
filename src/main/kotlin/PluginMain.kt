@@ -14,7 +14,7 @@ object PluginMain: KotlinPlugin(
     JvmPluginDescription(
         id = "mirai.UNO",
         name = "mirai UNO插件",
-        version = "0.2.6"
+        version = "0.2.7"
     ) {
         author("鄢振宇https://github.com/michael1015198808")
         info("mirai的UNO插件")
@@ -29,7 +29,7 @@ object PluginMain: KotlinPlugin(
         val UNO_POSTFIX = """\s*(UNO\s*)?"""
         val normal_cards = Regex("""[红黄蓝绿RYLG]([0-9转禁SRP]|\+2)$UNO_POSTFIX""")
         val wild_cards = Regex("""(变色|\+4)\s*[红黄蓝绿RYLG]?$UNO_POSTFIX""")
-        val draw  = Regex("""不要|没有|抽牌|摸牌""")
+        val draw  = Regex("""PASS|不要|没有|抽牌|摸牌""")
 
         eventChannel.subscribeAlways<GroupMessageEvent>{
             if(message[1] is PlainText) {

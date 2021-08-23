@@ -14,7 +14,7 @@ import kotlin.reflect.full.declaredMembers
 import kotlin.reflect.full.valueParameters
 
 object Config : AutoSavePluginConfig("GlobalConfig") {
-    @ValueDescription("计时器，5s内没有任何操作则自动判定超时")
+    @ValueDescription("计时器，30s内没有任何操作则自动判定超时")
     var timer by value(false)
     @ValueDescription("抢牌，某人出完一张牌时，如果有完全相同（颜色、点数都相同）的牌，可以无视顺序直接出牌。")
     var cut by value(false)
