@@ -97,6 +97,10 @@ data class Game(
         }
     }
     suspend fun playerInfo(builder: MessageChainBuilder, player: Player, uno: Boolean) {
+        if (player.cards.size == 1 && ! player.cards[0][1].isDigit()) {
+            builder += "最后一张牌不是数字牌，补摸1张"
+            draw_cards(player)
+        }
         when (player.cards.size) {
             0 -> {
                 builder += listOf<MessageContent>(
@@ -272,6 +276,7 @@ data class Game(
             builder += At(players[current].member.id)
             builder += "抽${max(stacking, 1)}张牌，剩余${players[current].cards.size}张牌\n"
             stacking = 0
+            plusFour = false
             next()
             playerInfo(builder, players[current], false)
             group.sendMessage(builder.build())

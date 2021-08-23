@@ -22,6 +22,8 @@ object Config : AutoSavePluginConfig("GlobalConfig") {
     var stack by value(false)
     @ValueDescription("出0拍桌，当有人打出0之后，所有人要在2s内拍一拍机器人，没拍的人罚2张牌。若所有人都拍了，则最晚的罚2张牌。")
     var touch by value(false)
+    @ValueDescription("最后一张需要是数字牌，如果最后一张不是数字牌，则要补摸一张牌（不需要喊UNO）")
+    var uno_number by value(false)
 }
 
 object ConfigCommand : CompositeCommand(

@@ -14,7 +14,7 @@ object PluginMain: KotlinPlugin(
     JvmPluginDescription(
         id = "mirai.UNO",
         name = "mirai UNO插件",
-        version = "0.2.7"
+        version = "0.2.8"
     ) {
         author("鄢振宇https://github.com/michael1015198808")
         info("mirai的UNO插件")
