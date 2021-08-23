@@ -7,11 +7,13 @@ import net.mamoe.mirai.event.events.GroupMessageEvent
 import net.mamoe.mirai.message.data.PlainText
 import net.mamoe.mirai.utils.info
 
+val games = mutableMapOf<Long, Game>()
+
 object PluginMain: KotlinPlugin(
     JvmPluginDescription(
         id = "mirai.UNO",
         name = "mirai UNO插件",
-        version = "0.1.1"
+        version = "0.1.3"
     ) {
         author("鄢振宇https://github.com/michael1015198808")
         info("mirai的UNO插件")
@@ -21,15 +23,19 @@ object PluginMain: KotlinPlugin(
         logger.info { "Plugin loaded" }
         //配置文件目录 "${dataFolder.absolutePath}/"
         val eventChannel = GlobalEventChannel.parentScope(this)
-        val games = mutableMapOf<Long, Game>()
         val normal_cards = Regex("""[红黄蓝绿RYLG]([0-9转禁SRP]|\+2)""")
         val wild_cards = Regex("""(变色|\+4)\s+[红黄蓝绿RYLG]?""")
-        val draw  = Regex("""不要|没有|抽牌""")
+        val draw  = Regex("""不要|没有|抽牌|摸牌""")
 
         eventChannel.subscribeAlways<GroupMessageEvent>{
             if(message[1] is PlainText) {
                 val game = games.getOrPut(group.id) { Game(group) }
                 var msg = message[1].toString().trim().uppercase()
+                if (msg.startsWith("UNO")) {
+                    msg = msg.substring(3)
+                } else if (game.waiting) {
+                    return@subscribeAlways
+                }
                 if (game.waiting) {
                     when (msg) {
                         "上桌" -> game.join(sender)
