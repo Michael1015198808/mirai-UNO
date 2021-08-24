@@ -131,12 +131,6 @@ data class Game(
                 group.sendMessage("你没有对应的牌！")
                 return
             }
-            if (lastCard != "" &&
-                card[0] != lastCard[0] &&
-                card[1] != lastCard[1] ) {
-                group.sendMessage("出的牌不符合牌型，上一次出的牌是$lastCard")
-                return
-            }
             if (stacking != 0) {
                 if (!card.contains('+')) {
                     group.sendMessage("出的牌不符合牌型，当前正在被累加")

@@ -14,7 +14,7 @@ object PluginMain: KotlinPlugin(
     JvmPluginDescription(
         id = "mirai.UNO",
         name = "mirai UNO插件",
-        version = "0.2.10"
+        version = "0.2.11"
     ) {
         author("鄢振宇https://github.com/michael1015198808")
         info("mirai的UNO插件")
@@ -55,6 +55,12 @@ object PluginMain: KotlinPlugin(
                     val l = msg.split(Regex("\\s"))
                     if (game.players[game.current].member.id == sender.id || (Config.cut && l[0] == game.lastCard)) {
                         if (normal_cards.matches(msg)) {
+                            if (game.lastCard != "" &&
+                                msg[0] != game.lastCard[0] &&
+                                msg[1] != game.lastCard[1] ) {
+                                group.sendMessage("出的牌不符合牌型，上一次出的牌是${game.lastCard}")
+                                return@subscribeAlways
+                            }
                             game.play(sender, l[0], "")
                         } else if (wild_cards.matches(msg)) {
                             val color = l.getOrNull(1)
