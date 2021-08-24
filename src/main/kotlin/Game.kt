@@ -8,6 +8,7 @@ import net.mamoe.mirai.event.nextEventOrNull
 import net.mamoe.mirai.message.data.*
 import java.lang.Math.max
 import java.lang.StringBuilder
+import java.time.LocalDateTime
 import java.util.TimerTask
 import java.util.Timer
 
@@ -93,7 +94,7 @@ data class Game(
             current = (current + players.size - 1) % players.size
         }
     }
-    suspend fun playerInfo(builder: MessageChainBuilder, player: Player, uno: Boolean) {
+    suspend fun playerInfo(builder: MessageChainBuilder, player: Player) {
         if (player.cards.size == 1 && ! player.cards[0][1].isDigit()) {
             builder += "最后一张牌不是数字牌，补摸1张"
             draw_cards(player)
@@ -113,10 +114,10 @@ data class Game(
             )
         }
         if (player.cards.size == 1) {
-            player.uno = uno
+            player.uno = null
         }
     }
-    suspend fun play(sender: Member, card: String, color: String, uno: Boolean) {
+    suspend fun play(sender: Member, card: String, color: String) {
         if (Config.cut && card == lastCard) {
             val index = players.indexOfFirst { it.member.id == sender.id }
             if (card !in players[index].cards) {
@@ -193,7 +194,7 @@ data class Game(
                 builder += "颜色变为$color\n"
                 lastCard = "${color}色"
             }
-            playerInfo(builder, players[prev], uno)
+            playerInfo(builder, players[prev])
             players[prev].sendCards()
             group.sendMessage(builder.build())
             if (Config.touch && card[1] == '0') {
@@ -222,23 +223,26 @@ data class Game(
         stacking = 0
         plusFour = false
         next()
-        playerInfo(builder, players[current], false)
+        playerInfo(builder, players[current])
         group.sendMessage(builder.build())
     }
     suspend fun checkUNO(sender: Member) {
+        val now = LocalDateTime.now()
         val player = players[prev]
         if (player.member.id == sender.id) {
             // 自己喊UNO
             if (player.cards.size != 1) {
-                group.sendMessage(messageChainOf(
-                    At(sender),
-                    PlainText("你的手牌数超过一张，不能UNO！\n罚抽2张牌")
-                ))
-                draw_cards(player, 2)
+                if (player.uno != null && now.isAfter(player.uno)) {
+                    group.sendMessage(messageChainOf(
+                        At(sender),
+                        PlainText("你的手牌数超过一张，不能UNO！\n罚抽2张牌")
+                    ))
+                    draw_cards(player, 2)
+                }
                 return
             }
-            if (player.uno == false) {
-                player.uno = true
+            if (player.uno == null) {
+                player.uno = now.plusSeconds(5)
                 group.sendMessage(messageChainOf(
                     At(sender),
                     PlainText("成功UNO！红色警报！")
@@ -247,14 +251,18 @@ data class Game(
         } else {
             // 抓人
             if (player.cards.size != 1) {
-                group.sendMessage(messageChainOf(
-                    At(sender),
-                    PlainText("被抓的人手牌数超过一张，不能UNO！\n罚抽2张牌")
-                ))
-                draw_cards(getPlayer(sender), 2)
+                if (player.uno != null && now.isAfter(player.uno)) {
+                    group.sendMessage(
+                        messageChainOf(
+                            At(sender),
+                            PlainText("被抓的人手牌数超过一张，不能UNO！\n罚抽2张牌")
+                        )
+                    )
+                    draw_cards(getPlayer(sender), 2)
+                }
                 return
             }
-            if (player.uno == false) {
+            if (player.uno == null) {
                 group.sendMessage(messageChainOf(
                     At(sender),
                     PlainText("抓人成功！\n"),
@@ -262,6 +270,17 @@ data class Game(
                     PlainText("罚抽2张牌。")
                 ))
                 draw_cards(player, 2)
+            } else {
+                if (now.isAfter(player.uno)) {
+                    group.sendMessage(
+                        messageChainOf(
+                            At(sender),
+                            PlainText("被抓的人已经喊过UNO！\n罚抽2张牌")
+                        )
+                    )
+                    draw_cards(getPlayer(sender), 2)
+                    return
+                }
             }
         }
     }

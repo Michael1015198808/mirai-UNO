@@ -1,10 +1,11 @@
 package michael.uno
 
 import net.mamoe.mirai.contact.Member
+import java.time.LocalDateTime
 
 data class Player(val member: Member) {
     var cards = mutableListOf<String>()
-    var uno = false
+    var uno: LocalDateTime? = LocalDateTime.now()
     suspend fun sendCards (msg: String = "") {
         cards.sortBy {
             val color = COLORS.indexOf(it[0])

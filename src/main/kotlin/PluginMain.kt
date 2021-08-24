@@ -14,7 +14,7 @@ object PluginMain: KotlinPlugin(
     JvmPluginDescription(
         id = "mirai.UNO",
         name = "mirai UNO插件",
-        version = "0.2.9"
+        version = "0.2.10"
     ) {
         author("鄢振宇https://github.com/michael1015198808")
         info("mirai的UNO插件")
@@ -35,6 +35,11 @@ object PluginMain: KotlinPlugin(
             if(message[1] is PlainText) {
                 val game = games.getOrPut(group.id) { Game(group) }
                 var msg = message[1].toString().trim().uppercase()
+                if (msg == "UNO结束") {
+                    group.sendMessage("已强制结束本局游戏")
+                    games.remove(group.id)
+                    return@subscribeAlways
+                }
                 if (msg != "UNO" && msg.startsWith("UNO")) {
                     msg = msg.substring(3)
                 } else if (game.waiting) {
@@ -48,20 +53,19 @@ object PluginMain: KotlinPlugin(
                     }
                 } else {
                     val l = msg.split(Regex("\\s"))
-                    if (game.players[game.current].member.id != sender.id && !(Config.cut && l[0] == game.lastCard)) {
-                        return@subscribeAlways
-                    }
-                    if (Config.timer) {
-                        game.timer.purge()
-                    }
-                    if (normal_cards.matches(msg)) {
-                        game.play(sender, l[0], "", msg.endsWith("UNO"))
-                    } else if (wild_cards.matches(msg)) {
-                        val color = l.getOrNull(1)
-                        if (color != null) {
-                            game.play(sender, l[0], color, msg.endsWith("UNO"))
-                        } else {
-                            group.sendMessage("""请指定颜色，如"+4 蓝" """)
+                    if (game.players[game.current].member.id == sender.id || (Config.cut && l[0] == game.lastCard)) {
+                        if (normal_cards.matches(msg)) {
+                            game.play(sender, l[0], "")
+                        } else if (wild_cards.matches(msg)) {
+                            val color = l.getOrNull(1)
+                            if (color != null) {
+                                game.play(sender, l[0], color)
+                            } else {
+                                group.sendMessage("""请指定颜色，如"+4 蓝" """)
+                            }
+                        }
+                        if (msg.endsWith("UNO")) {
+                            game.checkUNO(sender)
                         }
                     } else if (draw.matches(msg)) {
                         game.draw(sender)
@@ -69,9 +73,6 @@ object PluginMain: KotlinPlugin(
                         game.checkUNO(sender)
                     } else {
                         return@subscribeAlways
-                    }
-                    if (Config.timer) {
-                        game.timer.schedule(IdleCheckingTask(game), 30_000L)
                     }
                 }
             }
