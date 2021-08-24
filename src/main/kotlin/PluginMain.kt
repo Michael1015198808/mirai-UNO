@@ -14,7 +14,7 @@ object PluginMain: KotlinPlugin(
     JvmPluginDescription(
         id = "mirai.UNO",
         name = "mirai UNO插件",
-        version = "0.2.15"
+        version = "0.2.16"
     ) {
         author("鄢振宇https://github.com/michael1015198808")
         info("mirai的UNO插件")
@@ -69,12 +69,12 @@ object PluginMain: KotlinPlugin(
                             } else {
                                 group.sendMessage("""请指定颜色，如"+4 蓝" """)
                             }
+                        } else if (draw.matches(msg)) {
+                            game.draw(sender)
                         }
                         if (msg.endsWith("UNO")) {
                             game.checkUNO(sender)
                         }
-                    } else if (draw.matches(msg)) {
-                        game.draw(sender)
                     } else if (msg == "UNO") {
                         game.checkUNO(sender)
                     } else {
