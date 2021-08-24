@@ -22,6 +22,8 @@ object Config : AutoSavePluginConfig("GlobalConfig") {
     var touch by value(false)
     @ValueDescription("最后一张需要是数字牌，如果最后一张不是数字牌，则要补摸一张牌（不需要喊UNO）")
     var uno_number by value(false)
+    @ValueDescription("初始手牌数")
+    var initial by value(7)
 }
 
 object ConfigCommand : CompositeCommand(

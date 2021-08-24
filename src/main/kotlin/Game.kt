@@ -69,10 +69,10 @@ data class Game(
         deck.shuffle()
         players.mapIndexed {
                 index, player ->
-            player.cards = deck.subList(index * 7, index * 7 + 7).toMutableList()
+            player.cards = deck.subList(index * Config.initial, (index + 1) * Config.initial).toMutableList()
             player.sendCards()
         }
-        cardIndex = players.size * 7
+        cardIndex = players.size * Config.initial
         waiting = false
         group.sendMessage(messageChainOf(
             PlainText("游戏开始\n"),
