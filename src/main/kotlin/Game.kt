@@ -1,10 +1,11 @@
 package michael.uno
 
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import net.mamoe.mirai.contact.Group
 import net.mamoe.mirai.contact.Member
+import net.mamoe.mirai.event.GlobalEventChannel
 import net.mamoe.mirai.event.events.NudgeEvent
-import net.mamoe.mirai.event.nextEventOrNull
 import net.mamoe.mirai.message.data.*
 import java.lang.Math.max
 import java.lang.StringBuilder
@@ -279,22 +280,23 @@ data class Game(
         }
     }
     suspend fun touchEvent() {
-        group.sendMessage("请在5s内戳一戳机器人！")
+        group.sendMessage("请在${Config.touchTime}s内拍一拍机器人！")
         var unnudgePlayers = players.map { it.member.id }.toMutableSet()
         var lastNudger: Long? = null
-        nextEventOrNull<NudgeEvent>(5_000L) { event ->
-            if (unnudgePlayers.remove(event.from.id)) {
-                lastNudger = event.from.id
+        val listener = GlobalEventChannel.subscribeAlways<NudgeEvent> {
+            if (target.id == bot.id && unnudgePlayers.remove(from.id)) {
+                lastNudger = from.id
             }
-            false // Keep listening
         }
+        delay(Config.touchTime * 1000L)
+        listener.complete()
         if (unnudgePlayers.size > 0) {
             group.sendMessage(messageChainOf(
                 unnudgePlayers.map { playerId ->
                     draw_cards(players.first { it.member.id == playerId }, 2)
                     At(playerId)
                 }.toMessageChain(),
-                PlainText("未在5s内拍，罚抽2张牌")
+                PlainText("未在${Config.touchTime}s内拍一拍，罚抽2张牌")
             ))
         } else {
             group.sendMessage(messageChainOf(
