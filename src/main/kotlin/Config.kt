@@ -49,10 +49,9 @@ object ConfigCommand : CompositeCommand(
     suspend fun CommandSenderOnMessage<GroupMessageEvent>.settings() {
         fromEvent.group.sendMessage(
             members.joinToString("\n") { field ->
-                val mp = field as KProperty<Boolean>
                 """
-                ${field.name}：${mp.call(Config)}
-                    ${field.annotations.filterIsInstance<ValueDescription>().joinToString { it.value }}
+                ◆ ${field.name}：${field.call(Config).toString()}
+                ${field.annotations.filterIsInstance<ValueDescription>().joinToString { it.value }}
                 """.trimIndent()
             })
     }
