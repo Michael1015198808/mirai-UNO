@@ -5,6 +5,7 @@ import net.mamoe.mirai.console.command.CompositeCommand
 import net.mamoe.mirai.console.data.AutoSavePluginConfig
 import net.mamoe.mirai.console.data.ValueDescription
 import net.mamoe.mirai.console.data.value
+import net.mamoe.mirai.contact.Contact
 import net.mamoe.mirai.event.events.GroupMessageEvent
 import kotlin.reflect.KMutableProperty
 import kotlin.reflect.KMutableProperty1
@@ -32,17 +33,34 @@ object ConfigCommand : CompositeCommand(
     description = "UNO配置命令",
 ) {
     private val members = Config::class.declaredMembers
-    @SubCommand("设置", "set")
-    @Description("设置UNO参数")
-    suspend fun CommandSenderOnMessage<GroupMessageEvent>.set(option: String, on: Boolean) {
+    private suspend inline fun <reified T> set(contact: Contact, option: String, arg: T) {
         val field = members.find { it.name == option }
         if (field != null) {
-            val mp = field as KMutableProperty1<Config, Boolean>
-            mp.set(Config, on)
-            fromEvent.group.sendMessage("已${if (on) "启用" else "禁用"}$option！")
+            try {
+                val mp = field as KMutableProperty1<Config, T>
+                mp.set(Config, arg)
+                contact.sendMessage("已将${option}设为$arg")
+            } catch (e: java.lang.IllegalArgumentException) {
+                contact.sendMessage("${option}不是${T::class.simpleName}型变量！")
+            }
         } else {
-            fromEvent.group.sendMessage("不存在属性$option！")
+            contact.sendMessage("不存在属性$option！")
         }
+    }
+    @SubCommand("禁用", "disable")
+    @Description("禁用UNO主选项")
+    suspend fun CommandSenderOnMessage<GroupMessageEvent>.disable(option: String) {
+        set(fromEvent.group, option, false)
+    }
+    @SubCommand("启用", "enable")
+    @Description("启用UNO选项")
+    suspend fun CommandSenderOnMessage<GroupMessageEvent>.enable(option: String) {
+        set(fromEvent.group, option, true)
+    }
+    @SubCommand("设置", "set")
+    @Description("设置UNO参数")
+    suspend fun CommandSenderOnMessage<GroupMessageEvent>.setInt(option: String, arg: Int) {
+        set(fromEvent.group, option, arg)
     }
     @SubCommand("当前设置", "settings")
     @Description("打印UNO设置")
