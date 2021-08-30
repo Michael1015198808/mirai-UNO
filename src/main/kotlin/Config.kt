@@ -50,7 +50,7 @@ object ConfigCommand : CompositeCommand(
         }
     }
     @SubCommand("禁用", "disable")
-    @Description("禁用UNO主选项")
+    @Description("禁用UNO选项")
     suspend fun CommandSenderOnMessage<GroupMessageEvent>.disable(option: String) {
         set(fromEvent.group, option, false)
     }
